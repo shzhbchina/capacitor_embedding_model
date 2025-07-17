@@ -7,3 +7,5 @@
 格式为utf8的csv,修正PEH169的0被识别为O
 ### 2025年7月14日，v4
 增加二维esr和current_ratio列50列
+### 2025年7月14日， v4.1
+删除一维freq和temp列
