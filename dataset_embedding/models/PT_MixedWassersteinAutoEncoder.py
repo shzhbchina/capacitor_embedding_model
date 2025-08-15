@@ -15,17 +15,17 @@ class MaskedMixedWAE(nn.Module):
         # 其余结构和你第二阶段完全一样
         self.encoder = nn.Sequential(
             nn.Linear(input_dim * 2 - tot_discs + tot_embedding_dims, hidden_dim),  # 多一倍输入
-            nn.Dropout(dropout),
             nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),
+            nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.Dropout(dropout),
             nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),
+            nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.Dropout(dropout),
             nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),
+            nn.Dropout(dropout),
             nn.Linear(hidden_dim, latent_dim)
         )
 
@@ -38,9 +38,12 @@ class MaskedMixedWAE(nn.Module):
 
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, hidden_dim),
-            nn.Dropout(dropout),
             nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),
+            #nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.SiLU(),
             nn.Linear(hidden_dim, input_dim - tot_discs)
         )
 
@@ -48,9 +51,12 @@ class MaskedMixedWAE(nn.Module):
         for category_size in embedding_dimensions['cat_num']:
             layer = nn.Sequential(
                 nn.Linear(latent_dim, disc_dim),
-                nn.Dropout(dropout),
                 nn.LayerNorm(disc_dim),
-                nn.ReLU(),
+                nn.SiLU(),
+                # nn.Dropout(dropout),
+                nn.Linear(disc_dim, disc_dim),
+                nn.LayerNorm(disc_dim),
+                nn.SiLU(),
                 nn.Linear(disc_dim, category_size)
             )
             self.decoder_disc_layers.append(layer)

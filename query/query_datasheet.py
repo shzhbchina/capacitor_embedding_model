@@ -72,9 +72,10 @@ class query_datasheet():
 
         target_vector = df.iloc[0].values  # 我們的目標元件參數 (模型生成的)
 
-
-        diff = (dataset_filtered.values - target_vector)/target_vector
-        diff_weight=diff*param_weight
+        selected_rows = [col in self.dataset.continuous_column for col in dataset_filtered.columns]
+        diff = (dataset_filtered.values - target_vector)[:,selected_rows]/target_vector[selected_rows]
+        diff=diff*self.dataset.true_table[mask].values[:,selected_rows]
+        diff_weight=diff*param_weight[selected_rows]
         # 2. 計算每個條目(每一行)的 L2 範數，也就是歐氏距離
         distances = np.linalg.norm(diff_weight, axis=1)
 

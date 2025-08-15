@@ -141,6 +141,7 @@ class PreTrainer():
 
         for epoch in range(start_epoch, num_epoch):
             loss_tot,recon_loss_tot,mmd_loss_tot=0,0,0
+            train_max_esr=0
             dataset_length=len(train_loader.dataset)
             model.train()
             for data,true_table in train_loader:
@@ -153,11 +154,11 @@ class PreTrainer():
                 cat_masked_data=torch.concat([data_mask,~effective_mask],dim=1)#true_table
                 if not self.define_diffusion:
                     [recon_batch, pred_z] = model(cat_masked_data)
-                    [loss,recon_loss,mmd_loss] = self.loss_function(recon_batch,data,true_table=~effective_mask.bool())
+                    [loss,recon_loss,mmd_loss] = self.loss_function(recon_batch,data,pred_z,true_table_ini=~effective_mask.bool())
                 else:
                     [recon_batch, pred_z,  noise,pred_noise,x_noisy]=model(cat_masked_data, training_diffusion=True)
                     [loss, recon_loss, mmd_loss] = self.loss_function(recon_batch, data, pred_noise, noise,
-                                                                      ~effective_mask.bool())
+                                                                      true_table_ini=~effective_mask.bool())
                 optimizer.zero_grad()
                 loss.backward()
                 #batch_size=data.size(0)
@@ -165,14 +166,17 @@ class PreTrainer():
                 loss_tot += loss.item()/dataset_length*train_batch_size
                 recon_loss_tot += recon_loss.item()/dataset_length*train_batch_size
                 mmd_loss_tot += mmd_loss.item()/dataset_length*train_batch_size
+                train_max_esr_batch = torch.max((((recon_batch[0] - data) * ~effective_mask) ** 2)[:, 1])
+                train_max_esr = torch.max(torch.tensor((train_max_esr_batch, train_max_esr)))
                 optimizer.step()
-            print(f'Epoch {epoch}, Train Loss: {loss_tot:.6f}',end='')
+            print(f'Epoch {epoch}, Train Loss: {loss_tot:.6f},esr_m: {train_max_esr:.6f}',end='')
             writer.add_scalars('Train_Loss/train', {'total_loss':loss_tot,
                                                    'recon_loss':recon_loss_tot,'mmd_loss':mmd_loss_tot}, epoch)
 
 
             valid_loss_tot,valid_recon_loss_tot,valid_mmd_loss_tot,valid_mean=0,0,0,0
             valid_mean_vc=0
+            valid_mean_esr,valid_max_esr=0,0
             dataset_length = len(valid_loader.dataset)
             model.eval()
             for data,true_table in valid_loader:  # data应为归一化后的tensor
@@ -180,26 +184,33 @@ class PreTrainer():
                     data = data.to(device)
                     true_table = true_table.to(device)
                     print(data.device)
-                    data_mask, masked_table = random_mask(data, mask_ratio=0.1, mask_chance=0.9)
+                    data_mask, masked_table = random_mask(data, mask_ratio=0.15, mask_chance=0.9)
                     effective_mask=masked_table.bool()+~true_table.bool()  # valid and masked data
                     cat_masked_data = torch.concat([data_mask, ~effective_mask], dim=1) #true_table
                     if not self.define_diffusion:
                         [recon_batch, pred_z] = model(cat_masked_data)
-                        [loss, recon_loss, mmd_loss] = self.loss_function(recon_batch, data,true_table=~effective_mask.bool())
+                        [loss, recon_loss, mmd_loss] = self.loss_function(recon_batch, data,pred_z,true_table_ini=~effective_mask.bool())
                     else:
                         [recon_batch, pred_z, noise, pred_noise, x_noisy] = model(cat_masked_data,
                                                                                   training_diffusion=True)
                         [loss, recon_loss, mmd_loss] = self.loss_function(recon_batch, data, pred_noise, noise,
-                                                                          ~effective_mask.bool())
+                                                                          true_table_ini=~effective_mask.bool())
                     # batch_size = data.size(0)
                     # dim_size=data.size(1)
                     valid_loss_tot += loss.item() / dataset_length*data.shape[0]
                     valid_recon_loss_tot += recon_loss.item() / dataset_length*data.shape[0]
                     valid_mmd_loss_tot += mmd_loss.item() / dataset_length*data.shape[0]
-                    valid_mean+=torch.mean(((recon_batch[0]-data)*true_table)**2)/dataset_length*data.shape[0]
-                    valid_mean_vc += torch.mean((((recon_batch[0] - data) * true_table) ** 2)[:,0:2])/ dataset_length * data.shape[
+                    valid_mean+=torch.mean(((recon_batch[0]-data)*~effective_mask)**2)/dataset_length*data.shape[0]
+                    valid_mean_vc += torch.mean((((recon_batch[0] - data) * ~effective_mask) ** 2)[:,0:2])/ dataset_length * data.shape[
                         0]
-            print(f' Valid Loss: {valid_loss_tot:.6f}, mean err {valid_mean:.6f},{valid_mean_vc:.6f}')
+                    valid_mean_esr += torch.mean(
+                        (((recon_batch[0] - data) * ~effective_mask) ** 2)[:, 1]) / dataset_length * \
+                                      data.shape[0]
+                    valid_max_esr += torch.max(
+                        (((recon_batch[0] - data) * ~effective_mask) ** 2)[:, 1]) / dataset_length * \
+                                      data.shape[0]
+
+            print(f' Valid Loss: {valid_loss_tot:.6f}, mean err {valid_mean:.6f},{valid_mean_vc:.6f},esr_m:{valid_max_esr:.6f}')
             writer.add_scalars('Train_Loss/train', {'total_loss':valid_loss_tot,
                                                    'recon_loss':valid_recon_loss_tot,'mmd_loss':valid_mmd_loss_tot}, epoch)
             if scheduler_name=='ReduceLROnPlateau':

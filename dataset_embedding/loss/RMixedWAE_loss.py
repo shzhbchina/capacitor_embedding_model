@@ -4,8 +4,8 @@ import torch.nn.functional as F
 from typing import Optional, List
 
 
-def MixedWAE_loss( recon_x, x, z,true_table,disc_table,loss_conf=None):
-    pred_x, recon_cont_x, recon_disc_logits_x=recon_x
+def RMixedWAE_loss( recon_x, x, z,true_table,disc_table,loss_conf=None):
+    pred_x, recon_cont_x, recon_disc_logits_x,recon_steps_data=recon_x
     data_x, data_cont_x,data_disc_x=x,x[:,~disc_table],x[:,disc_table]
     z_prior = torch.randn_like(z)
     true_table_ini=true_table.clone()
@@ -48,7 +48,13 @@ def MixedWAE_loss( recon_x, x, z,true_table,disc_table,loss_conf=None):
     N = z.shape[0]
     cont_mask = true_table[:, ~disc_table]     # [batch, num_cont_features]
     disc_mask = true_table[:, disc_table]      # [batch, num_disc_features]
-    loss_cont = ((recon_cont_x - data_cont_x) ** 2 * cont_mask).sum() / (cont_mask.sum() + 1e-8)
+    #loss_cont = ((recon_cont_x - data_cont_x) ** 2 * cont_mask).sum() / (cont_mask.sum() + 1e-8)
+    T = len(recon_steps_data)
+    step_weights = torch.linspace(0.3, 0.7, T)  # 前面低权重，最后一步最高
+    loss_cont = 0.0
+    for w, step_x in zip(step_weights, recon_steps_data):
+        loss_cont += w * (((step_x - data_cont_x) ** 2 * cont_mask).sum() / (cont_mask.sum() + 1e-8))
+
     loss_cat = 0
     num_disc = disc_mask.shape[1] if len(disc_mask.shape) > 1 else 1
     for i, logits in enumerate(recon_disc_logits_x):
@@ -56,7 +62,7 @@ def MixedWAE_loss( recon_x, x, z,true_table,disc_table,loss_conf=None):
         ce = F.cross_entropy(logits, data_disc_x[:, i].long(), reduction='none')
         loss_cat += (ce * mask_col).sum() / (mask_col.sum() + 1e-8)
     loss_cat = loss_cat / num_disc
-    recon_loss = loss_cont + loss_cat
+    recon_loss = loss_cont + loss_cat*10
 
 
     # loss_cont = ((recon_cont_x- data_cont_x)**2*true_table[~disc_table]).mean()
@@ -91,10 +97,13 @@ def MixedWAE_loss( recon_x, x, z,true_table,disc_table,loss_conf=None):
 
 
     return [
-        (recon_loss.mean(dim=0) + reg_weight * mmd_loss),
+        (recon_loss.mean(dim=0) + reg_weight * mmd_loss+weak_norm_loss),
         (recon_loss).mean(dim=0),
         mmd_loss+weak_norm_loss,
     ]
+
+
+
 
 
 def imq_kernel( z1, z2):

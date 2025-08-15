@@ -12,7 +12,9 @@ from utils.dataset_to_gpu import dataset_to_gpu
 # 假设已有MyDataset、scaler等
 file_abs_path = os.path.dirname(os.path.abspath(__file__))
 #csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v4.2.csv')
-csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v4.3.csv')
+# csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v4.3.csv')
+#csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v4.3.1.csv')
+csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v5.1.csv')
 #scaler_save_path=os.path.join(file_abs_path,'save/scaler','scaler_params.save')
 dataset = MyDataset(csv_path,mixed_transform=True)
 
@@ -50,7 +52,7 @@ training_config={
                         'StepLR':{'step_size': 30, 'gamma': 0.9},
                         'ReduceLRONPlateau':{'mode': 'min', 'patience': 10, 'factor': 0.9},
                         'OneCycleLR':{'max_lr': 0.001, 'total_steps': 100}},
-    'gauss_noise':0.01,
+    'gauss_noise':0.02,#0.01
     'batch_size':256,
     'save_name':'Main_MWAE'
 }
@@ -59,7 +61,7 @@ loss_conf={
     'volt_weight':6,
     'cap_weight':6,
     'price_weight':6,
-    'ESR_ripple_weight':0.5,
+    'ESR_ripple_weight':1,#0.5
 }
 
 

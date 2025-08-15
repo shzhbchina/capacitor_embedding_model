@@ -1,9 +1,9 @@
 import torch
 from torch.utils.data import DataLoader,random_split
 from data.dataset import MyDataset
-from train.Pretrainer import PreTrainer
-from loss.Recon_loss import Recon_loss
-from models.PT_MixedWassersteinAutoEncoder import MaskedMixedWAE
+from train.BaseTrainer import BaseTrainer
+from loss.MixedWAE_loss import MixedWAE_loss
+from models.MT_CMixedWassersteinAutoEncoder import CMainMaskedMixedWAE
 import joblib,os
 from functools import partial
 from utils.dataset_to_gpu import dataset_to_gpu
@@ -12,7 +12,8 @@ from utils.dataset_to_gpu import dataset_to_gpu
 # 假设已有MyDataset、scaler等
 file_abs_path = os.path.dirname(os.path.abspath(__file__))
 #csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v4.2.csv')
-#csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v4.3.csv')
+# csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v4.3.csv')
+#csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v4.3.1.csv')
 csv_path=os.path.join(file_abs_path,'data/datasheets/combine_large_xls','combined_large_excel_v5.1.csv')
 #scaler_save_path=os.path.join(file_abs_path,'save/scaler','scaler_params.save')
 dataset = MyDataset(csv_path,mixed_transform=True)
@@ -41,28 +42,21 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 training_config={
-    'num_epoch':3201*2,
+    'num_epoch':1601*3,
     'device':device,
     'optimizer_name':'AdamW',
     'optimizer_lr':1e-4,
     'optimizer_decay_weight':0.001,
     'scheduler_name':'CosineAnnealingLR',
-    'scheduler_params':{'CosineAnnealingLR':{'T_max': 4000*2,'eta_min':1e-7*0.02},
+    'scheduler_params':{'CosineAnnealingLR':{'T_max': 6000,'eta_min':1e-7},
                         'StepLR':{'step_size': 30, 'gamma': 0.9},
                         'ReduceLRONPlateau':{'mode': 'min', 'patience': 10, 'factor': 0.9},
                         'OneCycleLR':{'max_lr': 0.001, 'total_steps': 100}},
-    'gauss_noise':0.01,
+    'gauss_noise':0.02*0,#0.01
+    'uniform_noise':0.01,
     'batch_size':256,
-    'save_name':'Pre_MWAE'
+    'save_name':'Main_CMWAE'
 }
-# loss_conf={
-#     'volt_weight':6,
-#     'cap_weight':6,
-#     'price_weight':6,
-#     'ESR_ripple_weight':0.5,
-#     'weak_norm_wmean':1e-3,
-#     'weak_norm_wvar':1e-4,
-# }
 loss_conf={
     'reg_weight':5.0,
     'volt_weight':6,
@@ -71,26 +65,17 @@ loss_conf={
     'price_weight':3,
     'ESR_weight':2,#0.5
     'ripple_weight':0.2,#0.5
-    'weak_norm_wmean':1e-3,
-    'weak_norm_wvar':1e-4,
 }
-# loss_conf={
-#     'reg_weight':5.0,
-#     'volt_weight':1,
-#     'cap_weight':5,
-#     'price_weight':1,
-#     'ESR_ripple_weight':1,
-#     'weak_norm_wmean':1e-3,
-#     'weak_norm_wvar':5e-4,
-# }
+
 
 disc_true_table=dataset.data_remain_columns.isin(dataset.category_column)
 #discrete_feature_list={'true_table':[0,1,0,1...],'dimensions':{'cat_num':[2,10,2],'embedding_dim':[1,2,1]}}
 discrete_feature_list={'true_table':disc_true_table,
                        'dimensions':{'cat_num':[2,10,2],'embedding_dim':[1,2+1,1]}}
-model=MaskedMixedWAE(input_dim=dataset.shape[1],hidden_dim=32*8,latent_dim=16*4,disc_dim=4*8,discrete_feature_list=discrete_feature_list,dropout=0.1)
-MixedWAE_loss_disc=partial(Recon_loss,disc_table=disc_true_table,loss_conf=loss_conf)
-trainer=PreTrainer(model,MixedWAE_loss_disc,train_set,val_set,training_config)
+encoder_path=os.path.join(file_abs_path,'save/Pre_MWAE/best_model.pth')
+model=CMainMaskedMixedWAE(input_dim=dataset.shape[1],hidden_dim=32*8,latent_dim=8*1,disc_dim=4*8,discrete_feature_list=discrete_feature_list,dropout=0.01,encoder_path=encoder_path)
+MixedWAE_loss_disc=partial(MixedWAE_loss,disc_table=disc_true_table,loss_conf=loss_conf)
+trainer=BaseTrainer(model,MixedWAE_loss_disc,train_set,val_set,training_config,input_concate_true_table=True)
 
 
 trainer.train()
