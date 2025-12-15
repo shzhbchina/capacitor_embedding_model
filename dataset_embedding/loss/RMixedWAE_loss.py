@@ -62,7 +62,7 @@ def RMixedWAE_loss( recon_x, x, z,true_table,disc_table,loss_conf=None):
         ce = F.cross_entropy(logits, data_disc_x[:, i].long(), reduction='none')
         loss_cat += (ce * mask_col).sum() / (mask_col.sum() + 1e-8)
     loss_cat = loss_cat / num_disc
-    recon_loss = loss_cont + loss_cat*10
+    recon_loss = loss_cont + loss_cat*10.0
 
 
     # loss_cont = ((recon_cont_x- data_cont_x)**2*true_table[~disc_table]).mean()

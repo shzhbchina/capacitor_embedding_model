@@ -42,13 +42,13 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 training_config={
-    'num_epoch':1700*10,
+    'num_epoch':int(1601*12),
     'device':device,
     'optimizer_name':'AdamW',
     'optimizer_lr':1e-5,
-    'optimizer_decay_weight':0.001,
+    'optimizer_decay_weight':1e-4,#0.001,
     'scheduler_name':'CosineAnnealingLR',
-    'scheduler_params':{'CosineAnnealingLR':{'T_max': 2000*10,'eta_min':1e-8},
+    'scheduler_params':{'CosineAnnealingLR':{'T_max': 2000*12,'eta_min':1e-8},
                         'StepLR':{'step_size': 30, 'gamma': 0.9},
                         'ReduceLRONPlateau':{'mode': 'min', 'patience': 10, 'factor': 0.9},
                         'OneCycleLR':{'max_lr': 0.001, 'total_steps': 100}},
@@ -58,7 +58,7 @@ training_config={
     'save_name':'Main_RCMWAE'
 }
 loss_conf={
-    'reg_weight':5.0,
+    'reg_weight':20.0,
     'volt_weight':6,
     'cap_weight':6,
     'vol_weight':6,
@@ -76,7 +76,7 @@ encoder_path=os.path.join(file_abs_path,'save/Pre_MWAE/best_model.pth')
 non_refine_path=os.path.join(file_abs_path,'save/Main_CMWAE/best_model.pth')
 model=RCMainMaskedMixedWAE(input_dim=dataset.shape[1],hidden_dim=32*8,latent_dim=8*1,disc_dim=4*8,
                            discrete_feature_list=discrete_feature_list,dropout=0.01,encoder_path=encoder_path,
-                           non_refine_path=non_refine_path,detach_refine=True)
+                           non_refine_path=non_refine_path,detach_refine=False)
 MixedWAE_loss_disc=partial(RMixedWAE_loss,disc_table=disc_true_table,loss_conf=loss_conf)
 trainer=BaseTrainer(model,MixedWAE_loss_disc,train_set,val_set,training_config,input_concate_true_table=True)
 

@@ -130,7 +130,6 @@ class CMainMaskedMixedWAE(nn.Module):
         disc_emb_cat = torch.cat(oh_embed_list, dim=1)  # (B, total_disc_embed_dim)
         disc_emb_cat_detached = disc_emb_cat.detach().clone()
         z_cond = torch.cat([z, disc_emb_cat_detached], dim=1)    # (B, latent+disc_emb)
-        #z_cond = torch.cat([z, disc_emb_cat], dim=1)
         recon_cont_x = self.decoder_cont(z_cond)
 
         recon_disc_x = torch.stack(

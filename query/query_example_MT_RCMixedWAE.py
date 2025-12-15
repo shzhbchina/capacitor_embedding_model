@@ -63,6 +63,7 @@ if not shuffled:
 else:
     N = len(dataset)
     sample_num = 1000
+    N=sample_num
     idx = np.random.choice(N, size=N, replace=False)
     test_input_dataset, test_true_table = dataset[idx]
     model.eval()

@@ -128,11 +128,10 @@ class optimizer():
             init_pos = particles
         )
 
-
-
+        start_time = time.perf_counter()
         # 优化
         best_cost, best_pos = optimizer.optimize(cost_function_partial, iters=1)
-
+        end_time = time.perf_counter()
 
         best_par=np.ceil(best_pos[-2])
         best_ser = np.ceil(best_pos[-1])
@@ -265,7 +264,7 @@ class optimizer():
                 particle = np.zeros((1, 2))
                 particle[:, -2] = np.ceil(n_par)
                 particle[:, -1] = np.ceil(n_ser)
-                cost_values = cost_function_partial(particle, gs_mode=True)  # shape: (num_db,)
+                cost_values = cost_function_partial(particle, gs_mode=True)  # shape: (num_db,),calculation
 
                 # 当前参数下top_k
                 cur_top_k_idx = np.argsort(cost_values)[:top_k]
@@ -479,7 +478,7 @@ test_optimizer=optimizer(model,query_instance,gmm_path=gmm_path)
 target_example={
     'I_f':{'f_Hz':[50,100000],'Irms_A':[5,5]},
     'V_t':{'t_us':np.linspace(0,0.01*1e6,64).tolist(),'V_volt':50+sine_gen(20,64)},
-    'C_uF':10000,
+    'C_uF':10100,
     'temperature_deg':50
 }#62cc0.58W,36score
 Vmax=np.max(target_example['V_t']['V_volt'])
@@ -498,7 +497,16 @@ cost_weight = {'loss_weight': 10,
                'dist_voltage_weight': 1,
                'cons_cap_weight': 50000,
                'cons_voltage_weight': 100000}
+
+import time
+start_time = time.perf_counter()
 test_optimizer.PSO(target_example,var_init_config,cost_weight)
+end_time = time.perf_counter()
+print(f"执行耗时: {end_time - start_time:.6f} 秒")
+start_time = time.perf_counter()
+best_z_inverse_gs,best_info=test_optimizer.grid_search(target_example, var_init_config, cost_weight)
+end_time = time.perf_counter()
+print(f"执行耗时: {end_time - start_time:.6f} 秒")
 
 
 
