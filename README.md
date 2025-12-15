@@ -10,6 +10,7 @@
 - run the optimizer, find best cap for design
 - run dataset_embedding/maintrain_RCMWAE to train the capacitor model
 - run dataset_embedding/pretrain_MWAE to refine the pretrain model
+- run query/query_example_MT_RCMixedWAE.py to evaluate the model performance
 
 ## 3. Acknowledgements / Disclaimer
 Parts of the code in this repository were generated or optimized with the assistance of AI tools (e.g., ChatGPT, Gemini, Copilot). 
