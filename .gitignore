@@ -5,6 +5,6 @@ dataset_embedding/data/capacitor_relationship/**
 dataset_embedding/data/datasheets/**
 !dataset_embedding/data/datasheets/
 !dataset_embedding/data/datasheets/combine_large_xls/
-!dataset_embedding/data/datasheets/combine_large_xls/combined_large_excel_v5.2.xlsx
+!dataset_embedding/data/datasheets/combine_large_xls/combined_large_excel_v5.2.csv
 
 
